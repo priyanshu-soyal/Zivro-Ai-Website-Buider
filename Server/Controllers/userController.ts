@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import openai from "../Config/OpenAI.js";
 
-const modelName = "openai/gpt-oss-120b:free";
+const modelName = "deepseek/deepseek-v4-flash:free";
 
 // Get user credits
 export const getUserCredits = async (req: Request, res: Response) => {
@@ -37,13 +37,22 @@ export const createUserProject = async (req: Request, res: Response) => {
         message: "Unauthorized",
       });
     }
+
+    if (!initial_prompt || initial_prompt.trim() === "") {
+      return res.status(400).json({ message: "Prompt is required" });
+    }
+    
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
 
-    if (user && user.credits < 5) {
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (user.credits < 5) {
       return res.status(403).json({
-        message: "add create to create more projects",
+        message: "Insufficient credits. Please purchase more credits."
       });
     }
 
@@ -88,14 +97,14 @@ export const createUserProject = async (req: Request, res: Response) => {
       messages: [
         {
           role: "system",
-          content: ` You are a prompt enhancement specialist.Take the user's website request and expand it intp a detailed, comprehensice prompt that will help create the best possible website.
+          content: ` You are a prompt enhancement specialist. Take the user's website request and expand it into a detailed, comprehensive prompt that will help create the best possible website.
             Enhance this prompt by:
-            1. Adding specific design details (layout , color scheme,typography)
+            1. Adding specific design details (layout, color scheme, typography)
             2. Specifying key sections and features
-            3. Describing the user experience and interactins
+            3. Describing the user experience and interactions
             4. Including modern web design best practices
             5. Mentioning responsive design requirements
-            6. Adding andy missing but important elements
+            6. Adding any missing but important elements
 
             Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3 paragraphs max).`,
         },
@@ -131,7 +140,7 @@ export const createUserProject = async (req: Request, res: Response) => {
       messages: [
         {
           role: "system",
-          content: `You are an expert web developer. Create a complete, production-ready, single-page website based on this request: "${enhancedPrompt}"
+          content: `You are an expert web developer. Create a complete, production-ready, single-page website based on this request: "${enhancedPrompt}."
             CRITICAL REQUIREMENTS:
             - You MUST output valid HTML ONLY. 
             - Use Tailwind CSS for ALL styling
@@ -148,7 +157,7 @@ export const createUserProject = async (req: Request, res: Response) => {
             - Make sure all buttons, cards, and components use Tailwind styling
 
             CRITICAL HARD RULES:
-            1. You MUST put ALL output ONLY into message.content.
+            1. You MUST put ALL output ONLY into the message. content.
             2. You MUST NOT place anything in "reasoning", "analysis", "reasoning_details", or any hidden fields.
             3. You MUST NOT include internal thoughts, explanations, analysis, comments, or markdown.
             4. Do NOT include markdown, explanations, notes, or code fences.
