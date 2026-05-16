@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import openai from "../Config/OpenAI.js";
 
+const modelName = "openai/gpt-oss-120b:free";
+
 // Get user credits
 export const getUserCredits = async (req: Request, res: Response) => {
   try {
@@ -82,18 +84,18 @@ export const createUserProject = async (req: Request, res: Response) => {
 
     // Enhance user prompt
     const promptEnhanceResponse = await openai.chat.completions.create({
-      model: "kwaipilot/kat-coder-pro:free",
+      model: modelName,
       messages: [
         {
           role: "system",
           content: ` You are a prompt enhancement specialist.Take the user's website request and expand it intp a detailed, comprehensice prompt that will help create the best possible website.
             Enhance this prompt by:
-            1.Adding specific design details (layout , color scheme,typography)
-            2.Specifying key sections and features
-            3.Describing the user experience and interactins
-            4.Including modern web design best practices
-            5.Mentioning responsive design requirements
-            6.Adding andy missing but important elements
+            1. Adding specific design details (layout , color scheme,typography)
+            2. Specifying key sections and features
+            3. Describing the user experience and interactins
+            4. Including modern web design best practices
+            5. Mentioning responsive design requirements
+            6. Adding andy missing but important elements
 
             Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3 paragraphs max).`,
         },
@@ -125,7 +127,7 @@ export const createUserProject = async (req: Request, res: Response) => {
 
     // Generate website code
     const codeGenerationResponse = await openai.chat.completions.create({
-      model: "kwaipilot/kat-coder-pro:free",
+      model: modelName,
       messages: [
         {
           role: "system",
