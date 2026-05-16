@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import openai from "../Config/OpenAI.js";
 
+const modelName = "openai/gpt-oss-120b:free";
+
 // Controller fn to make revision
 export const makeRevision = async (req: Request, res: Response) => {
   const userId = req.userId;
@@ -59,18 +61,18 @@ export const makeRevision = async (req: Request, res: Response) => {
 
     // enhance user prompt response
     const promptEnhanceResponse = await openai.chat.completions.create({
-      model: "openai/gpt-oss-120b:free",
+      model: modelName,
       messages: [
         {
           role: "system",
           content: `You are a prompt enhancement specialist.Take the user's website request and expand it intp a detailed, comprehensice prompt that will help create the best possible website.
             Enhance this prompt by:
-            1.Adding specific design details (layout , color scheme,typography)
-            2.Specifying key sections and features
-            3.Describing the user experience and interactins
-            4.Including modern web design best practices
-            5.Mentioning responsive design requirements
-            6.Adding andy missing but important elements
+            1. Adding specific design details (layout, color scheme, typography)
+            2. Specifying key sections and features
+            3. Describing the user experience and interactions
+            4. Including modern web design best practices
+            5. Mentioning responsive design requirements
+            6. Adding any missing but important elements
 
             Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3 paragraphs max).`,
         },
@@ -88,7 +90,7 @@ export const makeRevision = async (req: Request, res: Response) => {
     await prisma.conversation.create({
       data: {
         role: "assistant",
-        content: `I'have enhanced your prompt to: "${enhancedPrompt}"`,
+        content: `I have enhanced your prompt to: "${enhancedPrompt}"`,
         projectId,
       },
     });
@@ -102,7 +104,7 @@ export const makeRevision = async (req: Request, res: Response) => {
 
     // generate website code
     const codeGenerationResponse = await openai.chat.completions.create({
-      model: "openai/gpt-oss-120b:free",
+      model: modelName,
       messages: [
         {
           role: "system",
