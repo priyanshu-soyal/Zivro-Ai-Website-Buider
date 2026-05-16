@@ -396,8 +396,11 @@ const modelName = "deepseek/deepseek-v4-flash:free";
 
 // Helper function to extract only the HTML content from markdown fences
 const extractHtmlOnly = (rawResponse: string): string => {
-  const match = rawResponse.match(/```html\s*([\s\S]*?)\s*
-```/i) || rawResponse.match(/```([\s\S]*?)\s*```/);
+  // String format me RegExp use karne se esbuild parser confuse nahi hoga
+  const htmlRegex = new RegExp("```html\\s*([\\s\\S]*?)\\s*```", "i");
+  const genericRegex = new RegExp("```([\\s\\S]*?)\\s*```");
+
+  const match = rawResponse.match(htmlRegex) || rawResponse.match(genericRegex);
   
   if (match && match[1]) {
     return match[1].trim();
