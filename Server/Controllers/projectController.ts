@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import prisma from "../lib/prisma.js";
 import openai from "../Config/OpenAI.js";
 
-const modelName = "openai/gpt-oss-120b:free";
+const modelName = "deepseek/deepseek-v4-flash:free";
 
 // Controller fn to make revision
 export const makeRevision = async (req: Request, res: Response) => {
@@ -65,7 +65,7 @@ export const makeRevision = async (req: Request, res: Response) => {
       messages: [
         {
           role: "system",
-          content: `You are a prompt enhancement specialist.Take the user's website request and expand it intp a detailed, comprehensice prompt that will help create the best possible website.
+          content: `You are a prompt enhancement specialist. Take the user's website request and expand it into a detailed, comprehensive prompt that will help create the best possible website.
             Enhance this prompt by:
             1. Adding specific design details (layout, color scheme, typography)
             2. Specifying key sections and features
@@ -74,7 +74,7 @@ export const makeRevision = async (req: Request, res: Response) => {
             5. Mentioning responsive design requirements
             6. Adding any missing but important elements
 
-            Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3 paragraphs max).`,
+            Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3 paragraphs max).`
         },
         {
           role: "user",
@@ -117,7 +117,7 @@ export const makeRevision = async (req: Request, res: Response) => {
                   - Make sure it's a complete, standalone HTML document with Tailwind CSS
                   - Return the HTML Code Only, nothing else
 
-                  Apply the requested changes while maintaining the Tailwind CSS styling approach.`,
+                  Apply the requested changes while maintaining the Tailwind CSS styling approach.`
         },
         {
           role: "user",
@@ -141,7 +141,9 @@ export const makeRevision = async (req: Request, res: Response) => {
         where: { id: userId },
         data: { credits: { increment: 5 } },
       });
-      return;
+      return res.status(500).json({
+        message: "Failed to generate code",
+      });;
     }
 
     // Updates version
@@ -237,7 +239,7 @@ export const rollbackToVersion = async (req: Request, res: Response) => {
       data: {
         role: "assistant",
         content:
-          "I've rolled back your website to selected version. You can now preview it",
+          "I've rolled back your website to the selected version. You can now preview it.",
         projectId,
       },
     });
