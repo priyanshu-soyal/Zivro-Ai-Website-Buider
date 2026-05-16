@@ -27,7 +27,7 @@ export const makeRevision = async (req: Request, res: Response) => {
 
     if (!message || message.trim() === "") {
       return res.status(400).json({
-        message: "Please enter valid prompt",
+        message: "Please enter a valid prompt",
       });
     }
 
@@ -59,7 +59,7 @@ export const makeRevision = async (req: Request, res: Response) => {
 
     // enhance user prompt response
     const promptEnhanceResponse = await openai.chat.completions.create({
-      model: "kwaipilot/kat-coder-pro:free",
+      model: "openai/gpt-oss-120b:free",
       messages: [
         {
           role: "system",
@@ -102,7 +102,7 @@ export const makeRevision = async (req: Request, res: Response) => {
 
     // generate website code
     const codeGenerationResponse = await openai.chat.completions.create({
-      model: "kwaipilot/kat-coder-pro:free",
+      model: "openai/gpt-oss-120b:free",
       messages: [
         {
           role: "system",
