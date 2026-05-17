@@ -41,7 +41,7 @@ export default function App() {
           navigate("/");
         }
       } catch (error) {
-        console.error(error);
+        console.error("[OTP Status Check Error]:", error);
       }
     };
 

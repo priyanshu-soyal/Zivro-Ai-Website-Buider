@@ -79,7 +79,7 @@ export const getOtpStatus = async (req: Request, res: Response) => {
       resendCount: latestChallenge.resendCount,
     });
   } catch (error: any) {
-    console.error(error);
+    console.error("[getOtpStatus Error]:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -140,7 +140,7 @@ export const requestOtp = async (req: Request, res: Response) => {
 
     return res.json({ status: "resent" });
   } catch (error: any) {
-    console.error(error);
+    console.error("[requestOtp Error]:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -217,7 +217,7 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
     return res.json({ status: "verified" });
   } catch (error: any) {
-    console.error(error);
+    console.error("[verifyOtp Error]:", error);
     res.status(500).json({ message: error.message });
   }
 };
