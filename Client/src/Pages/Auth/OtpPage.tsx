@@ -118,7 +118,11 @@ export default function OtpPage() {
           <div className="text-xs text-white/60">Status: {statusLabel}</div>
         )}
 
+        <label htmlFor="otp-code" className="text-xs text-white/70">
+          OTP code
+        </label>
         <input
+          id="otp-code"
           className="w-full rounded-md bg-black/30 border border-[#22D3EE]/40 px-3 py-2 text-white focus:outline-none"
           placeholder="Enter OTP code"
           aria-label="Enter OTP verification code"
