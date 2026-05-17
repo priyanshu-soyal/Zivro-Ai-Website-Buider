@@ -374,7 +374,7 @@ import openai from "../Config/OpenAI.js";
 
 // ✅ FIX #1 — Two real, verified free models from OpenRouter
 const promptModel = "meta-llama/llama-3.3-70b-instruct:free"; // For prompt enhancement
-const codeModel = "qwen/qwen3-coder-480b-a22b:free";          // For HTML code generation
+const codeModel = "qwen/qwen3-coder:free";          // For HTML code generation
 
 // ─────────────────────────────────────────────
 // Helper: Safe content extractor
