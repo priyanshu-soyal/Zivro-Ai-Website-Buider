@@ -80,7 +80,7 @@ export const getOtpStatus = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("[getOtpStatus Error]:", error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -141,7 +141,7 @@ export const requestOtp = async (req: Request, res: Response) => {
     return res.json({ status: "resent" });
   } catch (error: any) {
     console.error("[requestOtp Error]:", error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -218,6 +218,6 @@ export const verifyOtp = async (req: Request, res: Response) => {
     return res.json({ status: "verified" });
   } catch (error: any) {
     console.error("[verifyOtp Error]:", error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 };
