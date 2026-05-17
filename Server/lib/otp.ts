@@ -33,9 +33,12 @@ export const getOtpConfig = (): OtpConfig => ({
 });
 
 const generateOtpCode = (length: number) => {
+  if (length <= 1) {
+    return crypto.randomInt(0, 10).toString();
+  }
+  const min = 10 ** (length - 1);
   const max = 10 ** length;
-  const code = crypto.randomInt(0, max).toString().padStart(length, "0");
-  return code;
+  return crypto.randomInt(min, max).toString();
 };
 
 export const hashOtpCode = (code: string) =>

@@ -123,6 +123,9 @@ export default function OtpPage() {
         </label>
         <input
           id="otp-code"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
           className="w-full rounded-md bg-black/30 border border-[#22D3EE]/40 px-3 py-2 text-white focus:outline-none"
           placeholder="Enter OTP code"
           aria-label="Enter OTP verification code"
