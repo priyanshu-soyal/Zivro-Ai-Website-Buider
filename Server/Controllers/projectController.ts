@@ -400,15 +400,14 @@ import openai from "../Config/OpenAI.js";
 // Agar pehla model 429/fail kare toh next try hoga
 // ─────────────────────────────────────────────
 const promptModels = [
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "deepseek/deepseek-chat-v3-0324:free",
-  "mistralai/mistral-7b-instruct:free",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
 ];
 
 const codeModels = [
-  "qwen/qwen3-coder:free",
-  "deepseek/deepseek-chat-v3-0324:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
+  "qwen-qwq-32b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
 ];
 
 // ─────────────────────────────────────────────
