@@ -110,7 +110,7 @@ export default function OtpPage() {
         <div>
           <h1 className="text-xl font-semibold text-white">Verify your email</h1>
           <p className="text-sm text-white/70">
-            Enter the 6-digit code sent to your email.
+            Enter the code sent to your email.
           </p>
         </div>
 
