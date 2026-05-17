@@ -464,88 +464,52 @@ const stripCodeFences = (code: string): string => {
 };
 
 // ─────────────────────────────────────────────
-// Controller: Get user credits
-// Route: GET /api/user/credits
+// Controller: Make AI Revision
+// Route: POST /api/project/:projectId/revise
 // ─────────────────────────────────────────────
-export const getUserCredits = async (req: Request, res: Response) => {
-  try {
-    const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.json({ credits: user.credits });
-  } catch (error: any) {
-    console.error("[getUserCredits Error]:", error);
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-// ─────────────────────────────────────────────
-// Controller: Create new project with AI generation
-// Route: POST /api/user/project
-// ─────────────────────────────────────────────
-export const createUserProject = async (req: Request, res: Response) => {
+export const makeRevision = async (req: Request, res: Response) => {
   const userId = req.userId;
 
   try {
-    const { initial_prompt } = req.body;
+    const { projectId } = req.params;
+    const { message } = req.body;
 
     // ── Auth check ──────────────────────────────────────
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // ── Input validation ─────────────────────────────────
-    if (!initial_prompt || initial_prompt.trim() === "") {
-      return res.status(400).json({ message: "Prompt is required" });
-    }
-
-    // ── User existence + credit check ────────────────────
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // ── Credit check ─────────────────────────────────────
     if (user.credits < 5) {
       return res.status(403).json({
-        message: "Insufficient credits. Please purchase more credits.",
+        message: "Insufficient credits. Please purchase more to make changes.",
       });
     }
 
-    // ── Create project record ─────────────────────────────
-    const project = await prisma.websiteProject.create({
-      data: {
-        name:
-          initial_prompt.length > 50
-            ? initial_prompt.substring(0, 46) + "..."
-            : initial_prompt,
-        initial_prompt,
-        userId,
-      },
+    // ── Input validation ─────────────────────────────────
+    if (!message || message.trim() === "") {
+      return res.status(400).json({ message: "Please enter a valid prompt" });
+    }
+
+    // ── Project existence check ──────────────────────────
+    const currentProject = await prisma.websiteProject.findUnique({
+      where: { id: projectId, userId },
+      include: { versions: true },
     });
 
-    // ── Increment total creations ─────────────────────────
-    await prisma.user.update({
-      where: { id: userId },
-      data: { totalCreation: { increment: 1 } },
-    });
+    if (!currentProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
 
-    // ── Log user message ──────────────────────────────────
+    // ── Log user message ─────────────────────────────────
     await prisma.conversation.create({
-      data: {
-        role: "user",
-        content: initial_prompt,
-        projectId: project.id,
-      },
+      data: { role: "user", content: message, projectId },
     });
 
     // ── Deduct credits ────────────────────────────────────
@@ -555,7 +519,7 @@ export const createUserProject = async (req: Request, res: Response) => {
     });
 
     // ── Step 1: Enhance user prompt ───────────────────────
-    console.log("[createUserProject] Enhancing prompt...");
+    console.log("[makeRevision] Enhancing prompt...");
     const enhancedPrompt = await tryModels(promptModels, [
       {
         role: "system",
@@ -572,7 +536,7 @@ Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3
       },
       {
         role: "user",
-        content: initial_prompt,
+        content: `User's request: "${message}"`,
       },
     ]);
 
@@ -582,7 +546,7 @@ Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3
         data: {
           role: "assistant",
           content: "Failed to enhance your prompt. Please try again.",
-          projectId: project.id,
+          projectId,
         },
       });
       await prisma.user.update({
@@ -596,48 +560,40 @@ Return ONLY the enhanced prompt, nothing else. Make it detailed but concise (2-3
     await prisma.conversation.create({
       data: {
         role: "assistant",
-        content: `I've enhanced your prompt to: "${enhancedPrompt}"`,
-        projectId: project.id,
+        content: `I have enhanced your prompt to: "${enhancedPrompt}"`,
+        projectId,
       },
     });
 
     await prisma.conversation.create({
       data: {
         role: "assistant",
-        content: "Now generating your website...",
-        projectId: project.id,
+        content: "Now making changes to your website...",
+        projectId,
       },
     });
 
-    // ── Step 2: Generate website HTML code ────────────────
-    console.log("[createUserProject] Generating website code...");
+    // ── Step 2: Generate updated website code ─────────────
+    console.log("[makeRevision] Generating updated code...");
     const rawCode = await tryModels(codeModels, [
       {
         role: "system",
-        content: `You are an expert web developer. Create a complete, production-ready, single-page website.
+        content: `You are an expert web developer.
 
 CRITICAL REQUIREMENTS:
-- Return ONLY valid, complete HTML. Nothing else.
-- Use Tailwind CSS for ALL styling.
-- Include this EXACT script in <head>: <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-- Use Tailwind utility classes extensively for styling, animations, and responsiveness.
-- Make it fully functional and interactive with JavaScript inside <script> tag before closing </body>.
-- Use modern, beautiful design with great UX using Tailwind classes.
-- Make it responsive using Tailwind responsive prefixes (sm:, md:, lg:, xl:).
-- Use Tailwind animations and transitions (animate-*, transition-*).
-- Include all necessary meta tags in <head>.
-- Use Google Fonts CDN if needed for custom fonts.
-- Use placeholder images from https://placehold.co/600x400.
+- Return ONLY the complete updated HTML code with the requested changes.
+- Use Tailwind CSS for ALL styling via CDN: <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+- Use Tailwind utility classes for all styling, animations, and responsiveness.
+- Include all JavaScript inside <script> tags before closing </body>.
+- Return a complete, standalone HTML document. Nothing else.
+- Do NOT include markdown, code fences, explanations, or comments outside the HTML.
+- Do NOT include \`\`\`html or \`\`\` anywhere in your response.
 
-HARD RULES — NEVER BREAK THESE:
-1. Do NOT include markdown, code fences, or backticks anywhere.
-2. Do NOT include \`\`\`html or \`\`\` anywhere in your response.
-3. Do NOT add explanations, notes, or comments outside the HTML.
-4. Output the raw HTML document only — nothing before or after it.`,
+Apply the requested changes while keeping the existing design intact unless told otherwise.`,
       },
       {
         role: "user",
-        content: enhancedPrompt,
+        content: `Here is the current website code:\n\n${currentProject.current_code}\n\nApply this change: ${enhancedPrompt}`,
       },
     ]);
 
@@ -649,7 +605,7 @@ HARD RULES — NEVER BREAK THESE:
         data: {
           role: "assistant",
           content: "Unable to generate the code. Please try again.",
-          projectId: project.id,
+          projectId,
         },
       });
       await prisma.user.update({
@@ -659,18 +615,18 @@ HARD RULES — NEVER BREAK THESE:
       return res.status(500).json({ message: "Failed to generate code" });
     }
 
-    // ── Save initial version ──────────────────────────────
+    // ── Save new version ──────────────────────────────────
     const version = await prisma.version.create({
       data: {
         code,
-        description: "Initial version",
-        projectId: project.id,
+        description: message.substring(0, 100),
+        projectId,
       },
     });
 
-    // ── Update project with generated code ────────────────
+    // ── Update project with new code ──────────────────────
     await prisma.websiteProject.update({
-      where: { id: project.id },
+      where: { id: projectId },
       data: {
         current_code: code,
         current_version_index: version.id,
@@ -682,15 +638,15 @@ HARD RULES — NEVER BREAK THESE:
       data: {
         role: "assistant",
         content:
-          "I've created your website! You can now preview it and request any changes.",
-        projectId: project.id,
+          "I've made the changes to your website! You can now preview it.",
+        projectId,
       },
     });
 
-    // ✅ res.json() is LAST — after all AI + DB operations
-    return res.json({ projectId: project.id });
+    // ✅ res.json() sent LAST — after all AI + DB operations
+    return res.json({ message: "Change made successfully" });
   } catch (error: any) {
-    console.error("[createUserProject Error]:", error.message);
+    console.error("[makeRevision Error]:", error.message);
 
     // Refund credits on unexpected crash
     if (userId) {
@@ -705,10 +661,10 @@ HARD RULES — NEVER BREAK THESE:
 };
 
 // ─────────────────────────────────────────────
-// Controller: Get a single user project by ID
-// Route: GET /api/user/project/:projectId
+// Controller: Rollback to a specific version
+// Route: POST /api/project/:projectId/rollback/:versionId
 // ─────────────────────────────────────────────
-export const getUserProject = async (req: Request, res: Response) => {
+export const rollbackToVersion = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
 
@@ -716,14 +672,87 @@ export const getUserProject = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { projectId } = req.params;
+    const { projectId, versionId } = req.params;
 
     const project = await prisma.websiteProject.findUnique({
       where: { id: projectId, userId },
-      include: {
-        conversation: { orderBy: { timestamp: "asc" } },
-        versions: { orderBy: { timestamp: "asc" } },
+      include: { versions: true },
+    });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const version = project.versions.find((v) => v.id === versionId);
+
+    if (!version) {
+      return res.status(404).json({ message: "Version not found" });
+    }
+
+    await prisma.websiteProject.update({
+      where: { id: projectId, userId },
+      data: {
+        current_code: version.code,
+        current_version_index: version.id,
       },
+    });
+
+    await prisma.conversation.create({
+      data: {
+        role: "assistant",
+        content:
+          "I've rolled back your website to the selected version. You can now preview it.",
+        projectId,
+      },
+    });
+
+    return res.json({ message: "Version rolled back successfully" });
+  } catch (error: any) {
+    console.error("[rollbackToVersion Error]:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// Controller: Delete project
+// Route: DELETE /api/project/:projectId
+// ─────────────────────────────────────────────
+export const deleteProject = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { projectId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    await prisma.websiteProject.delete({
+      where: { id: projectId, userId },
+    });
+
+    return res.json({ message: "Project deleted successfully" });
+  } catch (error: any) {
+    console.error("[deleteProject Error]:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// Controller: Get project code for preview
+// Route: GET /api/project/:projectId/preview
+// ─────────────────────────────────────────────
+export const getProjectPreview = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    const { projectId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const project = await prisma.websiteProject.findFirst({
+      where: { id: projectId, userId },
+      include: { versions: true },
     });
 
     if (!project) {
@@ -732,48 +761,70 @@ export const getUserProject = async (req: Request, res: Response) => {
 
     return res.json({ project });
   } catch (error: any) {
-    console.error("[getUserProject Error]:", error);
+    console.error("[getProjectPreview Error]:", error.message);
     return res.status(500).json({ message: error.message });
   }
 };
 
 // ─────────────────────────────────────────────
-// Controller: Get all projects of current user
-// Route: GET /api/user/projects
+// Controller: Get all published projects
+// Route: GET /api/project/published
 // ─────────────────────────────────────────────
-export const getAllUserProjects = async (req: Request, res: Response) => {
+export const getPublishedProject = async (req: Request, res: Response) => {
   try {
-    const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
     const projects = await prisma.websiteProject.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
+      where: { isPublished: true },
+      include: { user: true },
     });
 
     return res.json({ projects });
   } catch (error: any) {
-    console.error("[getAllUserProjects Error]:", error);
+    console.error("[getPublishedProject Error]:", error.message);
     return res.status(500).json({ message: error.message });
   }
 };
 
 // ─────────────────────────────────────────────
-// Controller: Toggle project publish status
-// Route: PUT /api/user/project/:projectId/publish
+// Controller: Get single published project by ID
+// Route: GET /api/project/view/:projectId
 // ─────────────────────────────────────────────
-export const togglePublish = async (req: Request, res: Response) => {
+export const getProjectById = async (req: Request, res: Response) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await prisma.websiteProject.findFirst({
+      where: { id: projectId },
+      include: { user: true },
+    });
+
+    if (!project || !project.isPublished || !project.current_code) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    return res.json({ code: project.current_code });
+  } catch (error: any) {
+    console.error("[getProjectById Error]:", error.message);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// Controller: Save manually edited project code
+// Route: PUT /api/project/:projectId/save
+// ─────────────────────────────────────────────
+export const saveProjectCode = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
+    const { projectId } = req.params;
+    const { code } = req.body;
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { projectId } = req.params;
+    if (!code) {
+      return res.status(400).json({ message: "Code is required" });
+    }
 
     const project = await prisma.websiteProject.findUnique({
       where: { id: projectId, userId },
@@ -785,70 +836,12 @@ export const togglePublish = async (req: Request, res: Response) => {
 
     await prisma.websiteProject.update({
       where: { id: projectId },
-      data: { isPublished: !project.isPublished },
+      data: { current_code: code, current_version_index: "" },
     });
 
-    return res.json({
-      message: project.isPublished
-        ? "Project unpublished successfully"
-        : "Project published successfully",
-    });
+    return res.json({ message: "Project saved successfully" });
   } catch (error: any) {
-    console.error("[togglePublish Error]:", error);
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-// ─────────────────────────────────────────────
-// Controller: Purchase credits
-// Route: POST /api/user/buy-credits
-// ─────────────────────────────────────────────
-export const purchaseCredits = async (req: Request, res: Response) => {
-  try {
-    interface Plan {
-      credits: number;
-      amount: number;
-    }
-
-    const plans: Record<string, Plan> = {
-      basic:      { credits: 50,  amount: 9  },
-      pro:        { credits: 100, amount: 19 },
-      enterprise: { credits: 250, amount: 49 },
-    };
-
-    const userId = req.userId;
-
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    const { planId } = req.body as { planId: string };
-    const plan = plans[planId];
-
-    if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
-    await prisma.transaction.create({
-      data: {
-        userId,
-        planId,
-        amount: plan.amount,
-        credits: plan.credits,
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { credits: { increment: plan.credits } },
-    });
-
-    return res.json({
-      message: `Successfully purchased ${plan.credits} credits`,
-      credits: plan.credits,
-    });
-  } catch (error: any) {
-    console.error("[purchaseCredits Error]:", error);
+    console.error("[saveProjectCode Error]:", error.message);
     return res.status(500).json({ message: error.message });
   }
 };
