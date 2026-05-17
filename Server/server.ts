@@ -70,8 +70,11 @@ app.get("/api/health", async (req: Request, res: Response) => {
   // ── Test 2: OpenRouter API key ───────────────────────────
   try {
     const testResponse = await openai.chat.completions.create({
-      model: "meta-llama/llama-3.3-70b-instruct:free",
-      messages: [{ role: "user", content: "Reply with only the word: OK" }],
+      model: "llama-3.1-8b-instant",
+      messages: [{
+      role: "user",
+      content: "Say OK",
+    },],
       max_tokens: 5,
     });
     const reply = testResponse.choices[0]?.message?.content;
