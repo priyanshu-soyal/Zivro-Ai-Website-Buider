@@ -7,6 +7,7 @@ import { betterAuth, string } from "better-auth";
 // Prisma
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "./prisma.js";
+import { createOtpChallenge, OTP_PURPOSE_LOGIN } from "./otp.js";
 
 const trustedOrigins = process.env.TRUSTED_ORIGINS?.split(",") || [];
 // Detect HTTPS from BETTER_AUTH_URL instead of NODE_ENV
@@ -34,6 +35,30 @@ export const auth = betterAuth({
   trustedOrigins,
   baseURL: process.env.BETTER_AUTH_URL,
   secret: process.env.BETTER_AUTH_SECRET,
+  databaseHooks: {
+    session: {
+      create: {
+        after: async (session) => {
+          try {
+            const user = await prisma.user.findUnique({
+              where: { id: session.userId },
+            });
+            if (!user) {
+              return;
+            }
+            await createOtpChallenge({
+              userId: session.userId,
+              email: user.email,
+              sessionId: session.id,
+              purpose: OTP_PURPOSE_LOGIN,
+            });
+          } catch (error) {
+            console.error("[OTP] Failed to create challenge", error);
+          }
+        },
+      },
+    },
+  },
   advanced: {
     cookies: {
       session_token: {

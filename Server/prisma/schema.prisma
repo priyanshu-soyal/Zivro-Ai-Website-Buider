@@ -137,3 +137,27 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+model OtpChallenge {
+  id          String   @id @default(uuid())
+  userId      String
+  email       String
+  purpose     String
+  codeHash    String
+  expiresAt   DateTime
+  attempts    Int      @default(0)
+  resendCount Int      @default(0)
+  lastSentAt  DateTime?
+  consumedAt  DateTime?
+  sessionId   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+  @@index([sessionId])
+  @@map("otp_challenge")
+}

@@ -233,6 +233,15 @@ OPENAI_API_KEY="sk-..."
 BETTER_AUTH_SECRET="your-secret-key"
 BETTER_AUTH_URL="http://localhost:5000"
 
+# Resend (OTP)
+RESEND_API_KEY="re_******"
+RESEND_FROM_EMAIL="Zivro <no-reply@yourdomain.com>"
+OTP_CODE_LENGTH=6
+OTP_EXPIRES_MINUTES=10
+OTP_MAX_ATTEMPTS=5
+OTP_RESEND_COOLDOWN_SECONDS=60
+OTP_MAX_RESENDS=5
+
 ```
 
 #### 2. Frontend Environment Variables (Client/.env)
@@ -336,6 +345,9 @@ CREATE PROJECT → EDIT (AI) → PREVIEW → VERSION CONTROL → PUBLISH → SHA
 
 ```
 POST   /api/auth/*             Better-Auth endpoints (OAuth, JWT, Sessions)
+GET    /api/auth/otp/status    OTP status for current session
+POST   /api/auth/otp/request   Send or resend OTP code
+POST   /api/auth/otp/verify    Verify OTP code
 ```
 
 ### Project Routes
@@ -439,6 +451,7 @@ CREATE TABLE Verification (identifier, token, expires, ...);
 - **Sessions**: JWT tokens with 30-day expiry
 - **Middleware**: `authMiddleware.ts` validates requests
 - **Credentials**: Stored securely with hashing
+- **OTP Verification**: Email OTP required after signup/signin via Resend
 
 ### Request Headers
 

@@ -8,6 +8,7 @@ import { auth } from "./lib/auth.js";
 import cors from "cors";
 import userRouter from "./routes/userRoutes.js";
 import projectRouter from "./routes/projectRoutes.js";
+import otpRouter from "./routes/otpRoutes.js";
 import openai from "./Config/OpenAI.js";
 import prisma from "./lib/prisma.js";
 
@@ -32,9 +33,6 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 app.use(cors(corsOptions));
-
-// ── Better Auth ───────────────────────────────────────────────
-app.all("/api/auth/{*any}", toNodeHandler(auth));
 
 // ── Body Parsers ──────────────────────────────────────────────
 app.use(express.json({ limit: "50mb" }));
@@ -90,6 +88,9 @@ app.get("/api/health", async (req: Request, res: Response) => {
 });
 
 // ── App Routes ────────────────────────────────────────────────
+app.use("/api/auth/otp", otpRouter);
+// ── Better Auth ───────────────────────────────────────────────
+app.all("/api/auth/{*any}", toNodeHandler(auth));
 app.use("/api/user", userRouter);
 app.use("/api/project", projectRouter);
 
