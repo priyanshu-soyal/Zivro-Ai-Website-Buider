@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import api from "@/Config/axios";
 import { authClient } from "@/lib/auth-client";
 
@@ -31,13 +32,23 @@ export default function OtpPage() {
   const canResend =
     !resendAvailableAt || resendAvailableAt.getTime() <= Date.now();
 
-  const fetchStatus = async () => {
+  const getErrorMessage = useCallback((err: unknown, fallback: string) => {
+    if (axios.isAxiosError(err)) {
+      return err.response?.data?.message || fallback;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return fallback;
+  }, []);
+
+  const fetchStatus = useCallback(async () => {
     const { data } = await api.get<OtpStatusResponse>("/api/auth/otp/status");
     setStatus(data);
     if (!data.required && data.verified) {
       navigate("/");
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     if (isPending) return;
@@ -45,11 +56,11 @@ export default function OtpPage() {
       navigate("/auth/signin");
       return;
     }
-    fetchStatus().catch((err: any) => {
+    fetchStatus().catch((err) => {
       console.error(err);
-      setError(err?.response?.data?.message || "Failed to load OTP status");
+      setError(getErrorMessage(err, "Failed to load OTP status"));
     });
-  }, [isPending, session?.user, navigate]);
+  }, [fetchStatus, getErrorMessage, isPending, navigate, session?.user]);
 
   const handleSend = async () => {
     setError(null);
@@ -59,8 +70,8 @@ export default function OtpPage() {
       await api.post("/api/auth/otp/request");
       setMessage("OTP code sent to your email.");
       await fetchStatus();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to send OTP code");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to send OTP code"));
     } finally {
       setIsSending(false);
     }
@@ -75,8 +86,8 @@ export default function OtpPage() {
       setMessage("OTP verified. Redirecting...");
       await fetchStatus();
       navigate("/");
-    } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to verify OTP");
+    } catch (err) {
+      setError(getErrorMessage(err, "Failed to verify OTP"));
       await fetchStatus().catch(() => undefined);
     } finally {
       setIsVerifying(false);
